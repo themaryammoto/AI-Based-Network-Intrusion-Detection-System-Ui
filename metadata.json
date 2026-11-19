@@ -1,0 +1,6 @@
+{
+  "name": "Sentinel AI — Network Intrusion Detection Dashboard",
+  "description": "AI-Based Network Intrusion Detection Pipeline SOC Dashboard built on CIC-IDS2017 dataset metrics, live traffic simulation, model evaluation, and lab attack testing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
