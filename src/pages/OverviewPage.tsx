@@ -357,7 +357,7 @@ export function OverviewPage({
               </h2>
               <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
                 {dataScope === 'live'
-                  ? 'Live flows scored through /api/model/predict & /api/ingest/flow'
+                  ? 'Live flows scored directly by the Render model API'
                   : 'Monday to Friday CIC-IDS2017 capture + live scored flows'}
               </p>
             </div>
@@ -783,7 +783,7 @@ export function OverviewPage({
 
           <div className="mt-4 pt-3 border-t border-[#E2E8F0] dark:border-[#1E354E]">
             <p className="text-[11px] font-semibold text-[#64748B] dark:text-[#94A3B8] mb-2">
-              Pipeline Stages (6 / 6 Operational)
+              {isRenderConnected ? 'Pipeline Stages (6/6 Operational)' : 'Backend Offline'}
             </p>
             <div className="grid grid-cols-2 gap-1.5">
               {PIPELINE_STAGES.map((stage) => (

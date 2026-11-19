@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
+import { CIC_77_FEATURES, padCicFeatures } from './src/data/cicFeatureSchema.ts';
 import type {
   AlertRecord,
   AlertStatus,
@@ -66,7 +67,7 @@ const DEFAULT_RENDER_CONFIG: RenderApiConfig = {
   healthPath: '/health',
   predictPath: '/predict',
   payloadFormat: 'wrapped_object',
-  timeoutSec: 55,
+  timeoutSec: 90,
   apiKey: '',
   connectionStatus: 'disconnected',
 };
@@ -87,11 +88,13 @@ function createInitialStore(): StoreState {
         generatedAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
         range: '2017-07-03 to 2017-07-07',
         summary:
-          'XGBoost achieved 99.73% Accuracy, 99.69% Attack Recall, 0.997 F1-Score, 0.999 ROC-AUC, and 0.09% FPR across 566,149 held-out CIC-IDS2017 test flows.',
+          'XGBoost achieved 99.87% Accuracy, 99.63% Precision, 99.69% Attack Recall, 99.66% F1-Score, 0.999 ROC-AUC, and 0.09% FPR across 566,149 held-out CIC-IDS2017 test flows.',
         metrics: [
           { label: 'Active Classifier', value: 'XGBoost' },
-          { label: 'Accuracy', value: '99.73%' },
+          { label: 'Accuracy', value: '99.87%' },
+          { label: 'Precision', value: '99.63%' },
           { label: 'Attack Recall', value: '99.69%' },
+          { label: 'F1-Score', value: '99.66%' },
           { label: 'False Positive Rate', value: '0.09%' },
         ],
       },
@@ -271,15 +274,12 @@ function normalizeSingleResponse(data: unknown): NormalizedPrediction {
 
     let labelStr = String(rawLabel).trim();
     const upper = labelStr.toUpperCase();
-    const explicitIsAttack = typeof obj.is_attack === 'boolean' ? obj.is_attack : undefined;
     const isBenign =
-      explicitIsAttack !== undefined
-        ? !explicitIsAttack
-        : upper === 'NORMAL' ||
-          upper === 'BENIGN' ||
-          upper === '0' ||
-          upper === 'SAFE' ||
-          upper === 'FALSE';
+      upper === 'NORMAL' ||
+      upper === 'BENIGN' ||
+      upper === '0' ||
+      upper === 'SAFE' ||
+      upper === 'FALSE';
 
     if (isBenign) {
       labelStr = 'Normal';
@@ -379,44 +379,6 @@ function normalizeSingleResponse(data: unknown): NormalizedPrediction {
     confidence: 50.0,
     severity: 'none',
   };
-}
-
-const CIC_77_FEATURES = [
-  'Destination Port', 'Flow Duration', 'Total Fwd Packets', 'Total Backward Packets',
-  'Total Length of Fwd Packets', 'Total Length of Bwd Packets', 'Fwd Packet Length Max',
-  'Fwd Packet Length Min', 'Fwd Packet Length Mean', 'Fwd Packet Length Std',
-  'Bwd Packet Length Max', 'Bwd Packet Length Min', 'Bwd Packet Length Mean',
-  'Bwd Packet Length Std', 'Flow Bytes/s', 'Flow Packets/s', 'Flow IAT Mean',
-  'Flow IAT Std', 'Flow IAT Max', 'Flow IAT Min', 'Fwd IAT Total', 'Fwd IAT Mean',
-  'Fwd IAT Std', 'Fwd IAT Max', 'Fwd IAT Min', 'Bwd IAT Total', 'Bwd IAT Mean',
-  'Bwd IAT Std', 'Bwd IAT Max', 'Bwd IAT Min', 'Fwd PSH Flags', 'Bwd PSH Flags',
-  'Fwd URG Flags', 'Bwd URG Flags', 'Fwd Header Length', 'Bwd Header Length',
-  'Fwd Packets/s', 'Bwd Packets/s', 'Min Packet Length', 'Max Packet Length',
-  'Packet Length Mean', 'Packet Length Std', 'Packet Length Variance',
-  'FIN Flag Count', 'SYN Flag Count', 'RST Flag Count', 'PSH Flag Count',
-  'ACK Flag Count', 'URG Flag Count', 'CWE Flag Count', 'ECE Flag Count',
-  'Down/Up Ratio', 'Average Packet Size', 'Avg Fwd Segment Size',
-  'Avg Bwd Segment Size', 'Fwd Avg Bytes/Bulk', 'Fwd Avg Packets/Bulk',
-  'Fwd Avg Bulk Rate', 'Bwd Avg Bytes/Bulk', 'Bwd Avg Packets/Bulk',
-  'Bwd Avg Bulk Rate', 'Subflow Fwd Packets', 'Subflow Fwd Bytes',
-  'Subflow Bwd Packets', 'Subflow Bwd Bytes', 'Init_Win_bytes_forward',
-  'Init_Win_bytes_backward', 'act_data_pkt_fwd', 'min_seg_size_forward',
-  'Active Mean', 'Active Std', 'Active Max', 'Active Min',
-  'Idle Mean', 'Idle Std', 'Idle Max', 'Idle Min',
-];
-
-function padCicFeatures(features: Record<string, number>): Record<string, number> {
-  const padded: Record<string, number> = {};
-  for (const col of CIC_77_FEATURES) {
-    const val = features[col];
-    padded[col] = typeof val === 'number' && Number.isFinite(val) ? val : 0;
-  }
-  for (const [k, v] of Object.entries(features)) {
-    if (!(k in padded) && typeof v === 'number' && Number.isFinite(v)) {
-      padded[k] = v;
-    }
-  }
-  return padded;
 }
 
 function buildRenderPayload(features: Record<string, number>, format: RenderApiConfig['payloadFormat']): unknown {

@@ -109,7 +109,7 @@ export function ReportsPage({
           { label: 'Active Detection Model', value: activeMetric.name },
           {
             label: 'Attack Recall / F1',
-            value: `${activeMetric.recall}% / ${activeMetric.f1Score}`,
+            value: `${activeMetric.recall}% / ${(activeMetric.f1Score * 100).toFixed(2)}%`,
           },
           { label: 'ROC-AUC Score', value: `${activeMetric.rocAuc}` },
           {
@@ -117,7 +117,7 @@ export function ReportsPage({
             value: `${formatNumber(XGBOOST_CONFUSION_MATRIX.testSamples)} flows`,
           },
         ],
-        summaryText: `Active model ${activeMetric.name} achieves ${activeMetric.recall}% recall, ${activeMetric.f1Score} F1-score, and ${activeMetric.fpr}% FPR on stratified 80/20 CIC-IDS2017 evaluation. Live inference latency averages ${liveLatencyLabel} across ${formatNumber(
+        summaryText: `Active model ${activeMetric.name} achieves ${activeMetric.recall}% recall, ${(activeMetric.f1Score * 100).toFixed(2)}% F1-score, and ${activeMetric.fpr}% FPR on stratified 80/20 CIC-IDS2017 evaluation. Live inference latency averages ${liveLatencyLabel} across ${formatNumber(
           liveStats.totalScored
         )} scored requests.`,
       },
@@ -219,7 +219,7 @@ export function ReportsPage({
         'Model,Family,Accuracy,Precision,Recall,F1-Score,ROC-AUC,FPR,Inference(ms)',
         ...MODEL_METRICS.map(
           (m) =>
-            `${m.name},${m.family},${m.accuracy}%,${m.precision}%,${m.recall}%,${m.f1Score},${m.rocAuc},${m.fpr}%,${m.inferenceTimeMs}`
+            `${m.name},${m.family},${m.accuracy}%,${m.precision}%,${m.recall}%,${(m.f1Score * 100).toFixed(2)}%,${m.rocAuc},${m.fpr}%,${m.inferenceTimeMs}`
         ),
       ].join('\n');
     } else if (report.templateId === 'attack-trend') {
@@ -509,7 +509,7 @@ export function ReportsPage({
               Saved Report Archive
             </h2>
             <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
-              Persisted on the backend server across browser reloads
+              Saved in this browser across reloads
             </p>
           </div>
           <span className="text-xs font-mono text-[#64748B] dark:text-[#94A3B8] tabular-nums">

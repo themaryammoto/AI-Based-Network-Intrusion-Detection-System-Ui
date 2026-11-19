@@ -21,8 +21,10 @@ import {
   deleteAlertApi,
   deleteReportApi,
   fetchBootstrapState,
+  inferAttackCategory,
   ingestLiveBatch,
   persistSettingsAndRenderConfig,
+  persistTelemetryState,
   resetBackendSettings,
   saveReportApi,
   testRenderConnection,
@@ -116,6 +118,7 @@ export default function App() {
   const sensorInFlightRef = useRef<boolean>(false);
   const backendWarnedRef = useRef<boolean>(false);
   const startupHealthDoneRef = useRef<boolean>(false);
+  const startupHealthConfigRef = useRef<RenderApiConfig>(DEFAULT_RENDER_CONFIG);
 
   const pushToast = useCallback(
     (title: string, description?: string, variant: ToastMessage['variant'] = 'success') => {
@@ -134,7 +137,7 @@ export default function App() {
 
   // Run GET /health against the configured Render backend (with auto-retry while waking up)
   const checkBackendHealthWithRetry = useCallback(
-    async (cfg: RenderApiConfig, silent = false, maxAttempts = 2) => {
+    async (cfg: RenderApiConfig, silent = false, maxAttempts = 3) => {
       if (!cfg.apiUrl.trim()) return;
 
       setRenderConfig((prev) => ({
@@ -211,7 +214,7 @@ export default function App() {
     [pushToast]
   );
 
-  // Hydrate persistent state from Express backend on mount, then immediately verify GET /health
+  // Hydrate browser-persisted state, then verify the Render backend directly.
   useEffect(() => {
     let active = true;
     fetchBootstrapState()
@@ -221,9 +224,11 @@ export default function App() {
         const hydratedRender: RenderApiConfig = {
           ...DEFAULT_RENDER_CONFIG,
           ...(data.renderConfig || {}),
+          apiUrl: DEFAULT_RENDER_CONFIG.apiUrl,
           // Never assume Online on startup until real GET /health succeeds
           connectionStatus: 'checking',
         };
+        startupHealthConfigRef.current = hydratedRender;
         setSettings(hydratedSettings);
         setRenderConfig(hydratedRender);
         if (Array.isArray(data.alerts)) setAlerts(data.alerts);
@@ -232,22 +237,25 @@ export default function App() {
         if (Array.isArray(data.reports)) setReports(data.reports);
         if (data.liveStats) setLiveStats({ ...EMPTY_LIVE_STATS, ...data.liveStats });
 
-        if (!startupHealthDoneRef.current && hydratedRender.apiUrl) {
-          startupHealthDoneRef.current = true;
-          checkBackendHealthWithRetry(hydratedRender, true, 2);
-        }
       })
       .catch((err) => {
-        console.error('Bootstrap fetch failed:', err);
+        console.error('Browser state load failed:', err);
+        const message = err instanceof Error ? err.message : 'Unable to load saved browser data.';
+        pushToast('Local Data Load Error', message, 'warning');
       })
       .finally(() => {
-        if (active) setIsBootstrapping(false);
+        if (!active) return;
+        if (!startupHealthDoneRef.current) {
+          startupHealthDoneRef.current = true;
+          checkBackendHealthWithRetry(startupHealthConfigRef.current, true, 3);
+        }
+        setIsBootstrapping(false);
       });
 
     return () => {
       active = false;
     };
-  }, [checkBackendHealthWithRetry]);
+  }, [checkBackendHealthWithRetry, pushToast]);
 
   // Sync Tailwind v4 .dark class on <html>
   useEffect(() => {
@@ -273,7 +281,7 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Sync backend telemetry responses (flows, alerts, throughput, liveStats) into React state
+  // Sync direct Render predictions and persist resulting telemetry in this browser.
   const syncBackendTelemetry = useCallback(
     (payload: {
       flow?: LiveFlowRow;
@@ -283,8 +291,21 @@ export default function App() {
       throughput?: LiveThroughputPoint[];
       liveStats?: LiveSessionStats;
     }) => {
+      try {
+        persistTelemetryState(payload);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unable to save telemetry in browser storage.';
+        console.error('Local telemetry persistence failed:', error);
+        pushToast('Local Save Failed', message, 'warning');
+      }
+
       if (payload.flows) {
-        setLiveFlows(payload.flows);
+        const incomingFlows = payload.flows;
+        setLiveFlows((prev) => {
+          const incomingIds = new Set(incomingFlows.map((flow) => flow.id));
+          return [...incomingFlows, ...prev.filter((flow) => !incomingIds.has(flow.id))].slice(0, 80);
+        });
       } else if (payload.flow) {
         const incomingFlow = payload.flow;
         setLiveFlows((prev) => {
@@ -309,19 +330,68 @@ export default function App() {
         if (settings.soundAlerts) playAlertChime();
       }
 
-      if (payload.throughput) {
+      if (payload.throughput?.length) {
         setLiveSeries(payload.throughput);
+      } else if (payload.flows?.length || payload.flow) {
+        const incomingFlows = payload.flows ?? (payload.flow ? [payload.flow] : []);
+        const attackFlows = incomingFlows.filter((flow) => flow.prediction === 'ATTACK');
+        const timestamp = new Date().toTimeString().slice(0, 8);
+        setLiveSeries((prev) => [
+          ...prev.slice(-29),
+          {
+            time: timestamp,
+            packetsPerSec: incomingFlows.reduce((sum, flow) => sum + flow.packets, 0) / 2,
+            flowsPerSec: incomingFlows.length / 2,
+            attackFlows: attackFlows.length,
+          },
+        ]);
       }
 
       if (payload.liveStats) {
         setLiveStats(payload.liveStats);
+      } else if (payload.flows?.length || payload.flow) {
+        const incomingFlows = payload.flows ?? (payload.flow ? [payload.flow] : []);
+        setLiveStats((prev) => {
+          const attacks = incomingFlows.filter((flow) => flow.prediction === 'ATTACK');
+          const benign = incomingFlows.length - attacks.length;
+          const latencyTotal = incomingFlows.reduce((sum, flow) => sum + (flow.latencyMs ?? 0), 0);
+          const attackByCategory = { ...prev.attackByCategory };
+          const sourceIpHits = { ...prev.sourceIpHits };
+          attacks.forEach((flow) => {
+            const category = inferAttackCategory(flow.attackLabel);
+            attackByCategory[category] = (attackByCategory[category] ?? 0) + 1;
+            const existing = sourceIpHits[flow.sourceIp];
+            sourceIpHits[flow.sourceIp] = {
+              count: (existing?.count ?? 0) + 1,
+              lastAttack: flow.attackLabel,
+              category,
+            };
+          });
+          return {
+            ...prev,
+            totalScored: prev.totalScored + incomingFlows.length,
+            benignScored: prev.benignScored + benign,
+            attackScored: prev.attackScored + attacks.length,
+            blockedToday: prev.blockedToday + attacks.length,
+            avgLatencyMs:
+              incomingFlows.length === 0
+                ? prev.avgLatencyMs
+                : Math.round(
+                    (prev.avgLatencyMs * prev.totalScored + latencyTotal) /
+                      (prev.totalScored + incomingFlows.length)
+                  ),
+            attackByCategory,
+            sourceIpHits,
+          };
+        });
       }
     },
-    [settings.soundAlerts]
+    [settings.soundAlerts, pushToast]
   );
 
   // Send 5 flows to real Render POST /predict_batch (strictly real API — zero demo data)
   const handleTriggerLiveBatch = useCallback(async () => {
+    if (renderConfig.connectionStatus !== 'connected') return;
     if (sensorInFlightRef.current) return;
     sensorInFlightRef.current = true;
     try {
@@ -368,7 +438,12 @@ export default function App() {
     } finally {
       sensorInFlightRef.current = false;
     }
-  }, [settings.alertSensitivity, syncBackendTelemetry, pushToast]);
+  }, [
+    renderConfig.connectionStatus,
+    settings.alertSensitivity,
+    syncBackendTelemetry,
+    pushToast,
+  ]);
 
   // Live Traffic Batch Polling Interval (default 2s)
   useEffect(() => {
@@ -396,8 +471,9 @@ export default function App() {
           `Model: ${nextSettings.activeModel} · Refresh: ${nextSettings.refreshIntervalSec}s`,
           'success'
         );
-      } catch {
-        pushToast('Save Failed', 'Could not persist settings to backend server.', 'danger');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unable to save settings locally.';
+        pushToast('Save Failed', message, 'danger');
       }
     },
     [pushToast]
@@ -410,11 +486,12 @@ export default function App() {
       try {
         const saved = await persistSettingsAndRenderConfig(settings, nextRender);
         if (saved.renderConfig) setRenderConfig(saved.renderConfig);
-      } catch {
-        // Keep optimistic UI state
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unable to save the endpoint settings.';
+        pushToast('Save Failed', message, 'danger');
       }
     },
-    [settings]
+    [settings, pushToast]
   );
 
   const handleResetDefaults = useCallback(async () => {
@@ -423,28 +500,29 @@ export default function App() {
       setSettings(res.settings ?? DEFAULT_SETTINGS);
       setRenderConfig(res.renderConfig ?? DEFAULT_RENDER_CONFIG);
       backendWarnedRef.current = false;
+      checkBackendHealthWithRetry(DEFAULT_RENDER_CONFIG, true, 3);
       pushToast(
         'Defaults Restored',
-        'AI-Based Network Intrusion Detection System settings reset on backend server.',
+        'AI-Based Network Intrusion Detection System settings reset in this browser.',
         'info'
       );
-    } catch {
+    } catch (error) {
       setSettings(DEFAULT_SETTINGS);
       setRenderConfig(DEFAULT_RENDER_CONFIG);
-      pushToast('Reset Error', 'Restored local defaults; backend unavailable.', 'warning');
+      const message = error instanceof Error ? error.message : 'Unable to reset saved browser data.';
+      pushToast('Reset Error', message, 'warning');
     }
-  }, [pushToast]);
+  }, [checkBackendHealthWithRetry, pushToast]);
 
   const handleTestRenderConnection = useCallback(
     async (overrideConfig?: RenderApiConfig) => {
-      const cfg = overrideConfig ?? renderConfig;
-      if (!cfg.apiUrl.trim()) {
-        pushToast('Missing URL', 'Enter your Render.com model URL first.', 'warning');
-        return;
-      }
-      await checkBackendHealthWithRetry(cfg, false, 1);
+      const cfg = {
+        ...(overrideConfig ?? renderConfig),
+        apiUrl: DEFAULT_RENDER_CONFIG.apiUrl,
+      };
+      await checkBackendHealthWithRetry(cfg, false, 3);
     },
-    [renderConfig, checkBackendHealthWithRetry, pushToast]
+    [renderConfig, checkBackendHealthWithRetry]
   );
 
   const handleSelectPage = useCallback(
@@ -473,8 +551,9 @@ export default function App() {
         } else if (status === 'Investigating') {
           pushToast('Investigation Started', `Alert ${id} moved to Investigating.`, 'info');
         }
-      } catch {
-        pushToast('Update Failed', `Could not update status for ${id}.`, 'danger');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : `Could not update status for ${id}.`;
+        pushToast('Update Failed', message, 'danger');
       }
     },
     [pushToast]
@@ -487,8 +566,9 @@ export default function App() {
         const res = await deleteAlertApi(id);
         if (Array.isArray(res.alerts)) setAlerts(res.alerts);
         pushToast('Alert Deleted', `Alert ${id} permanently removed.`, 'info');
-      } catch {
-        pushToast('Delete Failed', `Could not delete alert ${id}.`, 'danger');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : `Could not delete alert ${id}.`;
+        pushToast('Delete Failed', message, 'danger');
       }
     },
     [pushToast]
@@ -504,8 +584,9 @@ export default function App() {
       const res = await acknowledgeAllAlertsApi();
       if (Array.isArray(res.alerts)) setAlerts(res.alerts);
       pushToast('Alerts Acknowledged', 'All open alerts have been acknowledged.', 'success');
-    } catch {
-      pushToast('Action Failed', 'Could not acknowledge all alerts on server.', 'danger');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not acknowledge all alerts locally.';
+      pushToast('Action Failed', message, 'danger');
     }
   }, [pushToast]);
 
@@ -539,8 +620,9 @@ export default function App() {
           `Alert ${alert.id} (${alert.detectionLatency}) saved to Alerts Center.`,
           alert.severity === 'Critical' || alert.severity === 'High' ? 'danger' : 'info'
         );
-      } catch {
-        pushToast('Alert Save Error', `Could not persist alert ${alert.id}.`, 'danger');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : `Could not save alert ${alert.id}.`;
+        pushToast('Alert Save Error', message, 'danger');
       }
     },
     [pushToast, settings.soundAlerts]
@@ -550,9 +632,10 @@ export default function App() {
     try {
       await clearLiveFlowsApi();
       setLiveFlows([]);
-      pushToast('Flow Table Cleared', 'Live flow buffer cleared on backend server.', 'info');
-    } catch {
-      pushToast('Clear Failed', 'Could not clear flow buffer.', 'danger');
+      pushToast('Flow Table Cleared', 'Live flow buffer cleared from browser storage.', 'info');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not clear the local flow buffer.';
+      pushToast('Clear Failed', message, 'danger');
     }
   }, [pushToast]);
 
@@ -562,8 +645,9 @@ export default function App() {
         const res = await saveReportApi(report);
         if (Array.isArray(res.reports)) setReports(res.reports);
         pushToast('Report Saved', `${report.title} (${report.id}) persisted to archive.`, 'success');
-      } catch {
-        pushToast('Report Save Failed', 'Could not persist generated report.', 'danger');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Could not save the generated report.';
+        pushToast('Report Save Failed', message, 'danger');
       }
     },
     [pushToast]
@@ -576,8 +660,9 @@ export default function App() {
         const res = await deleteReportApi(id);
         if (Array.isArray(res.reports)) setReports(res.reports);
         pushToast('Report Deleted', `Report ${id} removed from archive.`, 'info');
-      } catch {
-        pushToast('Delete Failed', `Could not delete report ${id}.`, 'danger');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : `Could not delete report ${id}.`;
+        pushToast('Delete Failed', message, 'danger');
       }
     },
     [pushToast]
@@ -733,7 +818,10 @@ export default function App() {
               )}
 
               {activePage === 'dataset' && (
-                <DatasetExplorerPage isDark={settings.theme === 'dark'} />
+                <DatasetExplorerPage
+                  isDark={settings.theme === 'dark'}
+                  isBackendConnected={renderConfig.connectionStatus === 'connected'}
+                />
               )}
 
               {activePage === 'lab' && (

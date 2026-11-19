@@ -113,13 +113,9 @@ export function LiveTrafficPage({
     },
   };
 
-  const originUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-  const curlSnippet = `curl -X POST ${originUrl}/api/ingest/flow \\
+  const curlSnippet = `curl -X POST ${renderConfig.apiUrl}/predict \\
   -H "Content-Type: application/json" \\
   -d '{
-    "sourceIp": "172.16.0.1",
-    "destinationIp": "192.168.10.50",
-    "protocol": "TCP",
     "features": {
       "Destination Port": 80,
       "Flow Duration": 1124510,
@@ -329,7 +325,7 @@ export function LiveTrafficPage({
             {formatNumber(blockedToday)}
           </p>
           <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] mt-2">
-            Persisted counter updated on every detected attack flow
+            Updated for each real attack prediction
           </p>
         </div>
       </div>
@@ -342,7 +338,7 @@ export function LiveTrafficPage({
               Real-Time Network Throughput (Packets/sec &amp; Flows/sec)
             </h2>
             <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
-              Rolling 20-interval backend telemetry · {isLiveRunning ? 'Streaming active' : 'Stream paused'}
+              Rolling live telemetry · {isLiveRunning ? 'Streaming active' : 'Stream paused'}
             </p>
           </div>
           <div className="flex items-center gap-4 text-xs text-[#64748B] dark:text-[#94A3B8]">
@@ -412,10 +408,10 @@ export function LiveTrafficPage({
         <div className="p-4 sm:p-5 border-b border-[#E2E8F0] dark:border-[#1E354E] flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold text-[#0F172A] dark:text-white">
-              Persisted Live Flow Classification Feed
+              Live Flow Classification Feed
             </h2>
             <p className="text-xs text-[#64748B] dark:text-[#94A3B8] tabular-nums">
-              Showing {filteredFlows.length} of {liveFlows.length} persisted flows
+              Showing {filteredFlows.length} of {liveFlows.length} flows
             </p>
           </div>
 

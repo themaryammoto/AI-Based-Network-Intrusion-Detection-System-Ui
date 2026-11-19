@@ -193,7 +193,7 @@ export function InferencePage({
 
       const { prediction, attackLabel, confidence } = result.normalized;
       onNotify(
-        prediction === 'ATTACK' ? `Intrusion Detected: ${attackLabel}` : 'Flow Classified: BENIGN',
+        prediction === 'ATTACK' ? `Intrusion Detected: ${attackLabel}` : 'Flow Classified: Normal (Safe)',
         `${result.source === 'render-api' ? 'Render.com API' : 'Server Engine'} · Confidence ${confidence.toFixed(1)}% · ${result.latencyMs}ms`,
         prediction === 'ATTACK' ? 'danger' : 'success'
       );
@@ -211,7 +211,7 @@ export function InferencePage({
       id: `API-${Math.floor(4000 + Math.random() * 5999)}`,
       timestamp: now.toTimeString().slice(0, 8),
       date: now.toISOString().slice(0, 10),
-      attackType: attackLabel === 'BENIGN' ? 'Analyst Manual Log' : attackLabel,
+      attackType: attackLabel === 'Normal' ? 'Analyst Manual Log' : attackLabel,
       category: inferAttackCategory(attackLabel),
       sourceIp,
       destinationIp,
@@ -293,7 +293,7 @@ export function InferencePage({
       const attacksCount = scored.filter((r) => r.prediction === 'ATTACK').length;
       onNotify(
         'Batch Scoring Complete',
-        `Scored ${scored.length} flows (${attacksCount} attacks, ${scored.length - attacksCount} BENIGN). Persisted to telemetry.`,
+        `Scored ${scored.length} flows (${attacksCount} attacks, ${scored.length - attacksCount} Normal (Safe)). Persisted to telemetry.`,
         attacksCount > 0 ? 'warning' : 'success'
       );
     } finally {
@@ -397,7 +397,7 @@ export function InferencePage({
                 Render.com Model Endpoint Connection
               </h2>
               <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
-                Saved persistently on the Express server and proxied with zero CORS issues
+                Endpoint settings are saved in this browser; model requests go directly to Render.
               </p>
             </div>
           </div>
@@ -539,7 +539,7 @@ export function InferencePage({
                   CIC-IDS2017 Flow Feature Vector
                 </h2>
                 <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
-                  Select a flow vector preset or edit features / paste full 78-feature JSON
+                  Select a flow vector preset or edit features / paste full 77-feature JSON
                 </p>
               </div>
               <button
@@ -548,7 +548,7 @@ export function InferencePage({
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#F1F5F9] dark:bg-[#0B1B2B] border border-[#E2E8F0] dark:border-[#1E354E] text-[#0F172A] dark:text-white hover:border-[#2563EB] cursor-pointer whitespace-nowrap"
               >
                 <Code2 className="w-3.5 h-3.5 text-[#2563EB]" />
-                {useRawJson ? 'Switch to Form Grid' : 'Edit Raw JSON (78 cols)'}
+                {useRawJson ? 'Switch to Form Grid' : 'Edit Raw JSON (77 cols)'}
               </button>
             </div>
 
@@ -921,7 +921,7 @@ export function InferencePage({
                     Attacks: {batchAttacks}
                   </span>
                   <span className="font-semibold text-[#059669] tabular-nums">
-                    BENIGN: {batchBenign}
+                    Normal (Safe): {batchBenign}
                   </span>
                 </div>
 

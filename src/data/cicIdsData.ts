@@ -15,13 +15,13 @@ export const DATASET_TOTALS = {
   benignPercent: 80.3,
   attackPercent: 19.7,
   totalFiles: 8,
-  totalFeatures: 78,
-  totalColumns: 79,
+  totalFeatures: 77,
+  totalColumns: 78,
   totalSizeMb: 241,
   dateRange: '3–7 July 2017',
   schedule: 'Monday – Friday, 09:00 – 17:00',
   xgboostFpr: 0.09,
-  xgboostAccuracy: 99.73,
+  xgboostAccuracy: 99.87,
   xgboostRecall: 99.69,
   targetFpr: 2.0,
   targetRecall: 95.0,
@@ -493,15 +493,15 @@ export const MODEL_METRICS: ModelMetric[] = [
     id: 'xgboost',
     name: 'XGBoost',
     family: 'Supervised',
-    accuracy: 99.73,
+    accuracy: 99.87,
     precision: 99.63,
     recall: 99.69,
-    f1Score: 0.997,
+    f1Score: 0.9966,
     rocAuc: 0.999,
     fpr: 0.09,
     inferenceTimeMs: 1.9,
     isBest: true,
-    notes: 'Best overall model: 99.73% accuracy, 99.69% attack recall, and 0.09% FPR across 77 CIC-IDS2017 features.',
+    notes: 'Best overall model: 99.87% accuracy, 99.69% attack recall, and 0.09% FPR across 77 CIC-IDS2017 features.',
   },
   {
     id: 'random-forest',
@@ -540,7 +540,7 @@ export const MODEL_METRICS: ModelMetric[] = [
     rocAuc: 0.984,
     fpr: 2.6,
     inferenceTimeMs: 3.8,
-    notes: 'Multi-layer perceptron trained on StandardScaler normalized 78 features with class weights.',
+    notes: 'Multi-layer perceptron trained on StandardScaler normalized 77 features with class weights.',
   },
   {
     id: 'decision-tree',
@@ -597,9 +597,7 @@ export const MODEL_METRICS: ModelMetric[] = [
 ];
 
 // XGBoost 20% Held-out Test Split Confusion Matrix (20% of 2,830,743 ≈ 566,149 test flows)
-// Attack test flows: 111,529 | BENIGN test flows: 454,620
-// Recall 98.9% => TP = 110,302, FN = 1,227
-// FPR 1.8% => FP = 8,183 (wait: to keep precision/accuracy aligned with prompt's 99.2% / 98.7% / 1.8% FPR, let's show exact consistent figures)
+// Confusion-matrix counts sum to the 566,149-flow held-out test split.
 export const XGBOOST_CONFUSION_MATRIX = {
   testSamples: 566149,
   tp: 111183, // Correctly detected attacks (99.69% Recall)
@@ -609,7 +607,7 @@ export const XGBOOST_CONFUSION_MATRIX = {
   calibratedFprPercent: 0.09,
   recallPercent: 99.69,
   precisionPercent: 99.63,
-  accuracyPercent: 99.73,
+  accuracyPercent: 99.87,
 };
 
 // ROC Curve points (FPR vs TPR)
@@ -683,7 +681,7 @@ export const PIPELINE_STAGES = [
   {
     step: 5,
     name: 'Evaluation',
-    detail: 'XGBoost selected: 99.73% Acc, 99.69% Recall, 0.09% FPR',
+    detail: 'XGBoost selected: 99.87% Acc, 99.69% Recall, 0.09% FPR',
     status: 'Verified',
   },
   {
@@ -1259,7 +1257,7 @@ export const LAB_SIMULATION_SCENARIOS: SimulationScenario[] = [
       '[kali-attacker]$ nmap -sS -T4 -p 1-1024 192.168.10.50',
       '[nmap] Initiating SYN Stealth Scan against 192.168.10.50 (1024 ports)',
       '[zeek-sensor] Captured 1,024 short-duration SYN flows (mean duration: 52 us)',
-      '[cicflowmeter] Extracted 78 flow features -> Init_Win_bytes_fwd=1024, SYN_Flag=1',
+      '[cicflowmeter] Extracted 77 flow features -> Init_Win_bytes_fwd=1024, SYN_Flag=1',
       '[sentinel-ai] XGBoost inference complete -> Prediction: ATTACK (PortScan) | Confidence: 99.1%',
       '[alert-engine] Alert dispatched to SOC Dashboard in 2.1s (Target < 5.0s)',
     ],
@@ -1312,7 +1310,7 @@ export const LAB_SIMULATION_SCENARIOS: SimulationScenario[] = [
       '[kali-attacker]$ hping3 -S --flood -V -p 80 192.168.10.50',
       '[hping3] Flooding target 192.168.10.50:80 in high-rate SYN mode...',
       '[suricata-sensor] High-velocity ingress spike detected: 1,840 flows/sec on eth0',
-      '[cicflowmeter] Extracted 78 features -> Flow_Bytes/s=394,200, Total_Fwd_Pkts=1,620',
+      '[cicflowmeter] Extracted 77 features -> Flow_Bytes/s=394,200, Total_Fwd_Pkts=1,620',
       '[sentinel-ai] XGBoost inference complete -> Prediction: ATTACK (DoS/DDoS) | Confidence: 99.6%',
       '[alert-engine] Critical alert dispatched to SOC Dashboard in 2.4s (Target < 5.0s)',
     ],
@@ -1365,7 +1363,7 @@ export const LAB_SIMULATION_SCENARIOS: SimulationScenario[] = [
       '[kali-attacker]$ hydra -l admin -P rockyou_subset.txt ssh://192.168.10.50 -t 4',
       '[hydra] Attempting parallel SSH authentication handshakes on 192.168.10.50:22',
       '[zeek-sensor] Observed 48 repeated short SSH sessions with auth failure flags',
-      '[cicflowmeter] Extracted 78 features -> Dst_Port=22, Flow_IAT_Mean=412ms, Pkts=28',
+      '[cicflowmeter] Extracted 77 features -> Dst_Port=22, Flow_IAT_Mean=412ms, Pkts=28',
       '[sentinel-ai] XGBoost inference complete -> Prediction: ATTACK (Brute Force) | Confidence: 98.7%',
       '[alert-engine] High severity alert dispatched to SOC Dashboard in 2.3s (Target < 5.0s)',
     ],
@@ -1418,7 +1416,7 @@ export const LAB_SIMULATION_SCENARIOS: SimulationScenario[] = [
       '[kali-attacker]$ sqlmap -u "http://192.168.10.50/dvwa/sqli/?id=1" --batch --dbs',
       '[sqlmap] Testing boolean-based blind and UNION query payloads on GET parameter "id"',
       '[suricata-sensor] HTTP payload anomaly captured on 192.168.10.50:80 (URI length spike)',
-      '[cicflowmeter] Extracted 78 features -> Fwd_Pkt_Len_Mean=432B, Flow_Duration=5.2s',
+      '[cicflowmeter] Extracted 77 features -> Fwd_Pkt_Len_Mean=432B, Flow_Duration=5.2s',
       '[sentinel-ai] XGBoost inference complete -> Prediction: ATTACK (Web Attack) | Confidence: 97.9%',
       '[alert-engine] Critical alert dispatched to SOC Dashboard in 2.4s (Target < 5.0s)',
     ],

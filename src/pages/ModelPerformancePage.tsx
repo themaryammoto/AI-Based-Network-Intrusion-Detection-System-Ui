@@ -112,7 +112,7 @@ export function ModelPerformancePage({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: 'Attack Recall Target', target: '≥ 95.0%', achieved: '99.69%', met: true },
-          { label: 'XGBoost Accuracy / F1', target: 'F1 ≥ 0.950', achieved: '99.73% / 0.997', met: true },
+          { label: 'XGBoost Accuracy / F1', target: 'F1 ≥ 0.950', achieved: '99.87% / 99.66%', met: true },
           { label: 'False Positive Rate', target: '< 2.0%', achieved: '0.09%', met: true },
           { label: 'End-to-End Alert Latency', target: '< 5.0s', achieved: '< 1.2s', met: true },
         ].map((item) => (
@@ -138,7 +138,7 @@ export function ModelPerformancePage({
         <p className="text-xs sm:text-sm text-[#0F172A] dark:text-slate-100 leading-relaxed">
           <span className="font-semibold">Evaluation Priority:</span> Recall is primary because a
           missed attack is more costly than a false alarm. XGBoost achieves{' '}
-          <span className="font-mono font-semibold">99.73%</span> accuracy and{' '}
+          <span className="font-mono font-semibold">99.87%</span> accuracy and{' '}
           <span className="font-mono font-semibold">99.69%</span> attack recall while maintaining a{' '}
           <span className="font-mono font-semibold">0.09%</span> false positive rate (well below the
           2% SOC target).
@@ -258,16 +258,16 @@ export function ModelPerformancePage({
                       </p>
                     </td>
                     <td className="py-3 px-3 text-right font-mono font-semibold text-[#0F172A] dark:text-white tabular-nums">
-                      {model.accuracy.toFixed(1)}%
+                      {model.accuracy.toFixed(model.isBest ? 2 : 1)}%
                     </td>
                     <td className="py-3 px-3 text-right font-mono text-[#0F172A] dark:text-slate-200 tabular-nums">
-                      {model.precision.toFixed(1)}%
+                      {model.precision.toFixed(model.isBest ? 2 : 1)}%
                     </td>
                     <td className="py-3 px-3 text-right font-mono font-semibold text-[#059669] dark:text-[#34D399] tabular-nums">
-                      {model.recall.toFixed(1)}%
+                      {model.recall.toFixed(model.isBest ? 2 : 1)}%
                     </td>
                     <td className="py-3 px-3 text-right font-mono font-semibold text-[#0F172A] dark:text-white tabular-nums">
-                      {model.f1Score.toFixed(3)}
+                      {(model.f1Score * 100).toFixed(2)}%
                     </td>
                     <td className="py-3 px-3 text-right font-mono text-[#0F172A] dark:text-slate-200 tabular-nums">
                       {model.rocAuc.toFixed(3)}
@@ -277,7 +277,7 @@ export function ModelPerformancePage({
                         model.fpr < 2.0 ? 'text-[#059669]' : 'text-[#D97706]'
                       }`}
                     >
-                      {model.fpr.toFixed(1)}%
+                      {model.fpr.toFixed(model.isBest ? 2 : 1)}%
                     </td>
                     <td className="py-3 px-3 text-right font-mono text-[#64748B] dark:text-[#94A3B8] tabular-nums whitespace-nowrap">
                       {model.inferenceTimeMs.toFixed(1)} ms
@@ -386,10 +386,10 @@ export function ModelPerformancePage({
           </div>
 
           <div className="mt-4 pt-3 border-t border-[#E2E8F0] dark:border-[#1E354E] flex flex-wrap items-center justify-between gap-2 text-xs text-[#64748B] dark:text-[#94A3B8] tabular-nums">
-            <span>Accuracy: 99.73%</span>
+            <span>Accuracy: 99.87%</span>
             <span>Precision: 99.63%</span>
             <span>Recall: 99.69%</span>
-            <span>F1-Score: 0.997</span>
+            <span>F1-Score: 99.66%</span>
             <span>ROC-AUC: 0.999</span>
           </div>
         </div>
@@ -398,7 +398,7 @@ export function ModelPerformancePage({
         <div className="rounded-xl bg-white dark:bg-[#112236] border border-[#E2E8F0] dark:border-[#1E354E] shadow-xs p-5">
           <div className="mb-3">
             <h2 className="text-sm font-semibold text-[#0F172A] dark:text-white">
-              XGBoost Feature Importance (Top 10 of 78 Features)
+              XGBoost Feature Importance (Top 10 of 77 Features)
             </h2>
             <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
               Normalized gain importance across CIC-IDS2017 flow attributes
@@ -450,7 +450,7 @@ export function ModelPerformancePage({
               ROC Curve Comparison (TPR vs FPR)
             </h2>
             <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
-              XGBoost AUC = 0.994 vs Random Forest (0.991), LSTM (0.989), Logistic Regression (0.931)
+              XGBoost AUC = 0.999 vs Random Forest (0.991), LSTM (0.989), Logistic Regression (0.931)
             </p>
           </div>
           <div className="h-64 w-full">
@@ -470,7 +470,7 @@ export function ModelPerformancePage({
                 />
                 <Tooltip contentStyle={tooltipStyle} />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Line type="monotone" dataKey="xgboost" name="XGBoost (0.994)" stroke="#2563EB" strokeWidth={2.5} dot={false} />
+                <Line type="monotone" dataKey="xgboost" name="XGBoost (0.999)" stroke="#2563EB" strokeWidth={2.5} dot={false} />
                 <Line type="monotone" dataKey="rf" name="Random Forest (0.991)" stroke="#059669" strokeWidth={2} dot={false} />
                 <Line type="monotone" dataKey="lstm" name="LSTM (0.989)" stroke="#7C3AED" strokeWidth={2} dot={false} />
                 <Line type="monotone" dataKey="lr" name="Logistic Reg (0.931)" stroke="#D97706" strokeWidth={1.8} dot={false} />

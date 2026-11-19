@@ -9,7 +9,7 @@ Build a complete, professional, production-ready web dashboard app called **"Sen
 ## 1. Project Context (use these REAL numbers, do not invent different totals)
 - Dataset: CIC-IDS2017, collected 3–7 July 2017, Monday to Friday, 9 AM to 5 PM.
 - Total flows: 2,830,743 — BENIGN: 2,273,097 (80.3%), Attack: 557,646 (19.7%)
-- Features: 78 features + Label = 79 columns. 8 CSV files, one per day/time slot.
+- Features: 77 model features + Label = 78 columns. 8 CSV files, one per day/time slot.
 - Per-day attacks:
   - Monday: BENIGN only, 529,918 flows, no attacks
   - Tuesday: FTP-Patator, SSH-Patator (brute force)
@@ -63,7 +63,7 @@ Top row — 4 KPI cards with small trend arrows and sparkline:
 - Total Flows Analyzed: 2,830,743
 - Attacks Detected: 557,646 (19.7%)
 - BENIGN Traffic: 2,273,097 (80.3%)
-- False Positive Rate: 1.8% (Target < 2%)
+- False Positive Rate: 0.09% (Target < 2%)
 Second row:
 - Large Area/Line Chart: "Traffic Over Time — BENIGN vs Attack" for Mon-Fri, with legend and hover tooltip.
 - Donut Chart: "Attack Type Distribution" — DoS, PortScan, Brute Force, Web Attack, Bot, DDoS, Infiltration, Heartbleed.
@@ -95,14 +95,14 @@ Third row:
 ## 8. Page 5 — Model Performance
 - Model comparison table: Model | Accuracy | Precision | Recall | F1-Score | ROC-AUC | False Positive Rate | Inference Time
   - Logistic Regression, Decision Tree, Random Forest, XGBoost (highlight as Best Model with badge), MLP, LSTM
-  - XGBoost values: Accuracy 99.2%, Precision 98.7%, Recall 98.9%, F1 0.988, ROC-AUC 0.994, FPR 1.8%
+  - XGBoost values: Accuracy 99.87%, Precision 99.63%, Recall 99.69%, F1 99.66%, ROC-AUC 0.999, FPR 0.09%
 - Confusion Matrix visual for XGBoost: TP, TN, FP, FN with numbers and colors.
 - ROC Curve chart and Precision-Recall chart.
 - Feature Importance horizontal bar chart: Top 10 features — Flow Duration, Total Fwd Packets, Flow Bytes/s, Flow Packets/s, Init_Win_bytes_forward, etc.
 - Note box: "Recall is the primary metric because a missed attack is more costly than a false alarm."
 
 ## 9. Page 6 — Dataset Explorer
-- Dataset summary cards: 8 Files, 2,830,743 Rows, 79 Columns, 241 MB, Date Range 3–7 July 2017.
+- Dataset summary cards: 8 Files, 2,830,743 Rows, 78 Columns, 241 MB, Date Range 3–7 July 2017.
 - File table: File Name (Monday-WorkingHours, Tuesday-WorkingHours, Wednesday-WorkingHours, Thursday-WorkingHours-Morning, Thursday-WorkingHours-Afternoon, Friday-WorkingHours-Morning, Friday-WorkingHours-Afternoon, Friday-WorkingHours) | Rows | BENIGN | Attack | Attack Types.
 - Class imbalance visual: BENIGN 80.3% vs Attack 19.7% bar.
 - Preprocessing checklist with checkmarks: Remove Duplicates, Remove NaN / Infinite Values, Strip Column Spaces (df.columns.str.strip()), Encode Labels, StandardScaler (fit on train only), Train/Test Split 80/20 (no leakage), SMOTE / Class Weight for imbalance.

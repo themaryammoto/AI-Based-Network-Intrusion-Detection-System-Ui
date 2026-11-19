@@ -14,7 +14,7 @@
     "healthPath": "/health",
     "predictPath": "/predict",
     "payloadFormat": "wrapped_object",
-    "timeoutSec": 55,
+    "timeoutSec": 90,
     "apiKey": "",
     "connectionStatus": "connected",
     "lastLatencyMs": 369,
@@ -43,23 +43,35 @@
       "format": "PDF",
       "generatedAt": "2026-11-19 17:52",
       "range": "2017-07-03 to 2017-07-07",
-      "summary": "XGBoost achieved 98.9% Attack Recall, 0.988 F1-Score, 0.994 ROC-AUC, and 1.8% FPR across 566,149 held-out CIC-IDS2017 test flows.",
+      "summary": "XGBoost achieved 99.87% Accuracy, 99.63% Precision, 99.69% Attack Recall, 99.66% F1-Score, 0.999 ROC-AUC, and 0.09% FPR across 566,149 held-out CIC-IDS2017 test flows.",
       "metrics": [
         {
           "label": "Active Classifier",
           "value": "XGBoost"
         },
         {
+          "label": "Accuracy",
+          "value": "99.87%"
+        },
+        {
+          "label": "Precision",
+          "value": "99.63%"
+        },
+        {
           "label": "Attack Recall",
-          "value": "98.9%"
+          "value": "99.69%"
+        },
+        {
+          "label": "F1-Score",
+          "value": "99.66%"
         },
         {
           "label": "False Positive Rate",
-          "value": "1.8%"
+          "value": "0.09%"
         },
         {
           "label": "ROC-AUC",
-          "value": "0.994"
+          "value": "0.999"
         }
       ]
     }

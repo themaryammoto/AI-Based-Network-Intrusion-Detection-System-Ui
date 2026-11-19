@@ -265,7 +265,7 @@ export function AlertsCenterPage({
             Alerts Center
           </h1>
           <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-0.5">
-            Triage intrusion alerts, inspect extracted 78-feature flow vectors, and track analyst resolution
+            Triage intrusion alerts, inspect extracted 77-feature flow vectors, and track analyst resolution
           </p>
         </div>
 

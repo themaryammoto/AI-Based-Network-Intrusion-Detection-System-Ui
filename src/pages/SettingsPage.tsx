@@ -112,7 +112,7 @@ export function SettingsPage({
                 Render.com Kaggle Model Endpoint
               </h2>
               <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
-                Saved persistently on the backend server and proxied via /api/model/* routes (zero CORS errors)
+                Model health and inference requests connect directly to the Render API.
               </p>
             </div>
           </div>
@@ -314,7 +314,7 @@ export function SettingsPage({
               ))}
             </select>
             <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] mt-1">
-              XGBoost is the default production model (99.73% Accuracy, 99.69% Attack Recall, 0.09% FPR).
+              XGBoost is the default production model (99.87% Accuracy, 99.69% Attack Recall, 0.09% FPR).
             </p>
           </div>
 

@@ -44,7 +44,7 @@ export function PredictionBadge({ prediction, label }: { prediction: 'BENIGN' | 
   if (prediction === 'BENIGN') {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-[#059669]/10 text-[#059669] dark:bg-[#059669]/20 dark:text-[#6EE7B7] whitespace-nowrap">
-        BENIGN
+        Normal (Safe)
       </span>
     );
   }

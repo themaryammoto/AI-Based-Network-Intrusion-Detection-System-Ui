@@ -21,6 +21,7 @@ import { parseCicCsv } from '../services/modelApi';
 
 interface DatasetExplorerPageProps {
   isDark: boolean;
+  isBackendConnected: boolean;
 }
 
 interface UploadedCsvProfile {
@@ -36,7 +37,7 @@ interface UploadedCsvProfile {
   numericSummary: Array<{ column: string; min: number; mean: number; max: number }>;
 }
 
-export function DatasetExplorerPage({ isDark }: DatasetExplorerPageProps) {
+export function DatasetExplorerPage({ isDark, isBackendConnected }: DatasetExplorerPageProps) {
   const [fileSearch, setFileSearch] = useState('');
   const [uploadedProfile, setUploadedProfile] = useState<UploadedCsvProfile | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -277,7 +278,7 @@ export function DatasetExplorerPage({ isDark }: DatasetExplorerPageProps) {
         {[
           { label: 'CSV Capture Files', value: `${DATASET_TOTALS.totalFiles} Files`, sub: '1 per day / time slot' },
           { label: 'Total Flow Rows', value: formatNumber(DATASET_TOTALS.totalFlows), sub: 'Exact combined records' },
-          { label: 'Columns / Schema', value: `${DATASET_TOTALS.totalColumns} Columns`, sub: '78 features + 1 Label' },
+          { label: 'Columns / Schema', value: `${DATASET_TOTALS.totalColumns} Columns`, sub: '77 features + 1 Label' },
           { label: 'Dataset Size', value: `${DATASET_TOTALS.totalSizeMb} MB`, sub: 'Compressed CSV corpus' },
           { label: 'Capture Window', value: DATASET_TOTALS.dateRange, sub: 'Mon–Fri, 9 AM – 5 PM' },
         ].map((stat) => (
@@ -526,7 +527,9 @@ export function DatasetExplorerPage({ isDark }: DatasetExplorerPageProps) {
             End-to-End NIDS Pipeline
           </h2>
           <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-0.5 mb-4">
-            6 operational stages from PCAP capture to live alerting
+            {isBackendConnected
+              ? '6/6 Operational'
+              : 'Backend Offline'}
           </p>
 
           <ol className="space-y-3">

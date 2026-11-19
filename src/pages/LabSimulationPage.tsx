@@ -186,7 +186,7 @@ export function LabSimulationPage({
           recommendedAction: scenario.recommendedAction,
         });
 
-        if (!res.ok) {
+        if (!res.ok || !res.flow) {
           setTerminalLines((prev) => [
             ...prev,
             `[error] ${res.error || 'Render /predict failed'} — zero demo data generated.`,
